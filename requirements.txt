@@ -2,3 +2,4 @@ opencv-python~=4.4.0.44
 pyqt5~=5.15.1
 imutils
 scipy
+dlib
