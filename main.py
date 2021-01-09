@@ -41,9 +41,13 @@ def main():
     stream = cv2.VideoCapture(0)
     HOG_face_detector = dlib.get_frontal_face_detector()
     dlib_facelandmark = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
-    isRunning = False
-    t1 = 0
-    t2 = 0
+    isRunningMouth = False
+    isRunningEye = False
+    mouthT1 = 0
+    mouthT2 = 0
+    eyeT1 = 0
+    eyeT2 = 0
+    blinkCounter = 0
 
     while True:
         _, frame = stream.read()
@@ -159,29 +163,71 @@ def main():
 
             EAR = (left_EAR + right_EAR) / 2
             EAR = round(EAR, 2)
-            print(EAR)
+            #print(EAR)
 
             MAR = mouth_aspect_ratio(inner_mouth)
             MAR = round(MAR, 2)
             #print(MAR)
-            if MAR >= 0.50 and not isRunning:
+            if MAR >= 0.50 and not isRunningMouth:
                 # start timer and stop it from being started again
-                t1 = time.perf_counter()
-                print(t1)
-                isRunning = True
+                mouthT1 = time.perf_counter()
+                print(mouthT1)
+                isRunningMouth = True
 
-            elif MAR < 0.5 and isRunning:
-                t2 = time.perf_counter()
-                print(t2)
-                if (t2 - t1) > 5:
+            elif MAR < 0.5 and isRunningMouth:
+                mouthT2 = time.perf_counter()
+                print(mouthT2)
+                if (mouthT2 - mouthT1) > 5:
                     print("Did you just yawn??")
-                isRunning = False
+                isRunningMouth = False
 
         key = cv2.waitKey(1)
         if key == 27:
             break
 
+        '''
+        Calculate Blink Values
+        '''
+        blinkThreshold = 0.19
+        blinkTime = 0.05
+        if EAR <= blinkThreshold and not isRunningEye:
+            # start timer and stop it from being started again
+            eyeT1 = time.perf_counter()
+            print("Blink started")
+            isRunningEye = True
+
+        elif EAR > blinkThreshold and isRunningEye:
+            eyeT2 = time.perf_counter()
+            if (eyeT2 - eyeT1) > blinkTime:
+                blinkCounter += 1
+                print(eyeT2-eyeT1)
+            isRunningEye = False
+
+
+
+
+        '''
+        Text overlay
+        '''
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        fontScale = 0.7
+        fontColour = (0, 0, 255)
+        lineType = 2
+
+        # (x,y) from top left
+        position1 = (10, 30)
+        position2 = (10, 60)
+        position3 = (10, 90)
+        position4 = (10, 120)
+
+        cv2.putText(frame, "Blink Counter: " + str(blinkCounter), position1, font, fontScale, fontColour, lineType)
+        cv2.putText(frame, "Freqency: " + " blinks/s", position2, font, fontScale, fontColour, lineType)
+        cv2.putText(frame, "Avg Blink Duration: " + " s", position3, font, fontScale, fontColour, lineType)
+        cv2.putText(frame, "Last Blink Duration: " + " s", position4, font, fontScale, fontColour, lineType)
+
         cv2.imshow("Drowsy", frame)
+
+
 
     stream.release()
     cv2.destroyAllWindows()
