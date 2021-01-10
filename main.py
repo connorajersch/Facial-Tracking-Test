@@ -43,6 +43,7 @@ def main():
     dlib_facelandmark = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
     isRunningMouth = False
     isRunningEye = False
+    eyeOpen = True
     mouthT1 = 0
     mouthT2 = 0
     eyeT1 = 0
@@ -61,7 +62,7 @@ def main():
             inner_mouth = []
 
             # display left eye
-            for n in range(36,42):
+            for n in range(36, 42):
                 x = face_landmarks.part(n).x
                 y = face_landmarks.part(n).y
                 left_eye.append((x, y))
@@ -181,30 +182,29 @@ def main():
                     print("Did you just yawn??")
                 isRunningMouth = False
 
+            '''
+            Calculate Blink Values
+            '''
+            blinkThreshold = 0.19
+            blinkTime = 0.05
+            if EAR <= blinkThreshold and not isRunningEye:
+                # start timer and stop it from being started again
+                eyeT1 = time.perf_counter()
+                print("Blink started")
+                isRunningEye = True
+                eyeOpen = False
+
+            elif EAR > blinkThreshold and isRunningEye:
+                eyeT2 = time.perf_counter()
+                if (eyeT2 - eyeT1) > blinkTime:
+                    blinkCounter += 1
+                    print(eyeT2 - eyeT1)
+                isRunningEye = False
+                eyeOpen = True
+
         key = cv2.waitKey(1)
         if key == 27:
             break
-
-        '''
-        Calculate Blink Values
-        '''
-        blinkThreshold = 0.19
-        blinkTime = 0.05
-        if EAR <= blinkThreshold and not isRunningEye:
-            # start timer and stop it from being started again
-            eyeT1 = time.perf_counter()
-            print("Blink started")
-            isRunningEye = True
-
-        elif EAR > blinkThreshold and isRunningEye:
-            eyeT2 = time.perf_counter()
-            if (eyeT2 - eyeT1) > blinkTime:
-                blinkCounter += 1
-                print(eyeT2-eyeT1)
-            isRunningEye = False
-
-
-
 
         '''
         Text overlay
@@ -219,15 +219,15 @@ def main():
         position2 = (10, 60)
         position3 = (10, 90)
         position4 = (10, 120)
+        position5 = (10, 150)
 
         cv2.putText(frame, "Blink Counter: " + str(blinkCounter), position1, font, fontScale, fontColour, lineType)
         cv2.putText(frame, "Freqency: " + " blinks/s", position2, font, fontScale, fontColour, lineType)
         cv2.putText(frame, "Avg Blink Duration: " + " s", position3, font, fontScale, fontColour, lineType)
         cv2.putText(frame, "Last Blink Duration: " + " s", position4, font, fontScale, fontColour, lineType)
+        cv2.putText(frame, "Eye Status: " + str(eyeOpen), position5, font, fontScale, fontColour, lineType)
 
         cv2.imshow("Drowsy", frame)
-
-
 
     stream.release()
     cv2.destroyAllWindows()
